@@ -108,18 +108,18 @@ func (db Database) CreateTableTransactions() error {
 func (db Database) InsertTransaction(t Transaction) error {
 
 	tx, err := db.Conn.Begin(db.Ctx)
-	defer tx.Commit(db.Ctx)
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback(db.Ctx)
 
 	var balance, b float64
 	QueryRow := `SELECT balance FROM wallets WHERE user_id = $1 AND currency = $2;`
-	if err = db.Conn.QueryRow(db.Ctx, QueryRow, t.UserId, t.FromCurr).Scan(&balance); err != nil {
+	if err = tx.QueryRow(db.Ctx, QueryRow, t.UserId, t.FromCurr).Scan(&balance); err != nil {
 		return err
 	}
 
-	if err = db.Conn.QueryRow(db.Ctx, QueryRow, t.UserId, t.ToCurr).Scan(&b); err != nil {
+	if err = tx.QueryRow(db.Ctx, QueryRow, t.UserId, t.ToCurr).Scan(&b); err != nil {
 		return err
 	}
 
@@ -127,20 +127,21 @@ func (db Database) InsertTransaction(t Transaction) error {
 		return errors.New("Not enough balance to transaction")
 	} else {
 		QueryRow = `UPDATE wallets SET balance = balance-$1 WHERE user_id = $2 AND currency = $3;`
-		if _, err := db.Conn.Exec(db.Ctx, QueryRow, t.FromAmount, t.UserId, t.FromCurr); err != nil {
+		if _, err := tx.Exec(db.Ctx, QueryRow, t.FromAmount, t.UserId, t.FromCurr); err != nil {
 			return err
 		}
 		QueryRow = `UPDATE wallets SET balance = balance+$1 WHERE user_id = $2 AND currency = $3;`
-		if _, err := db.Conn.Exec(db.Ctx, QueryRow, t.ToAmount, t.UserId, t.ToCurr); err != nil {
+		if _, err := tx.Exec(db.Ctx, QueryRow, t.ToAmount, t.UserId, t.ToCurr); err != nil {
 			return err
 		}
 	}
 
 	QueryRow = `INSERT INTO transactions (user_id, from_currency, to_currency, from_amount, to_amount, rate, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7);`
-	if _, err := db.Conn.Exec(db.Ctx, QueryRow, t.UserId, t.FromCurr, t.ToCurr, t.FromAmount, t.ToAmount, t.Rate, t.CreatedAt); err != nil {
+	if _, err := tx.Exec(db.Ctx, QueryRow, t.UserId, t.FromCurr, t.ToCurr, t.FromAmount, t.ToAmount, t.Rate, t.CreatedAt); err != nil {
 		return err
 	}
 
+	tx.Commit(db.Ctx)
 	return err
 
 }

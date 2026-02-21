@@ -195,6 +195,9 @@ func (app App) GetWallet(w http.ResponseWriter, r *http.Request) {
 
 func (app App) Exchange(w http.ResponseWriter, r *http.Request) {
 
+	app.RWmtx.Lock()
+	defer app.RWmtx.Unlock()
+
 	var transDTO database.TransactionDTO
 	if err := json.NewDecoder(r.Body).Decode(&transDTO); err != nil {
 		w.WriteHeader(400)
