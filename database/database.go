@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"os"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -20,7 +21,8 @@ func (db *Database) InsertConn(ctx context.Context, conn *pgx.Conn) {
 
 func Connect(ctx context.Context) (*pgx.Conn, error) {
 
-	return pgx.Connect(ctx, "postgres://postgres:113355@localhost:5432/Converter")
+	Conn_string := os.Getenv("CONN_STRING")
+	return pgx.Connect(ctx, Conn_string)
 
 }
 

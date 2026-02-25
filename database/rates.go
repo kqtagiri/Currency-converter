@@ -3,7 +3,6 @@ package database
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 )
@@ -111,7 +110,6 @@ func (db Database) CheckRatesUpdate() error {
 		QueryRow := `SELECT created_at FROM rates WHERE from_currency = $1 AND to_currency = $2 ORDER BY created_at DESC;`
 		var date time.Time
 		if err := db.Conn.QueryRow(db.Ctx, QueryRow, rate.FromCurr, "BYN").Scan(&date); err != nil || date != rateDate {
-			fmt.Println(date, '\n', rateDate)
 			QueryRow = `INSERT INTO rates (from_currency, to_currency, rate, created_at) VALUES ($1,$2,$3,$4);`
 			if _, err := db.Conn.Exec(db.Ctx, QueryRow, rate.FromCurr, "BYN", rate.Rate, rate.Date); err != nil {
 				return err
